@@ -34,4 +34,4 @@ Welcome to the frontend repository of our Point of Sale (POS) System built using
 
 1. **Clone the repository:**
    ```sh
-   git clone https://github.com/your-username/pos-system-react-frontend.git
+   git clone https://github.com/kavinduemalka/Point-of-Sale-System-Frontend
