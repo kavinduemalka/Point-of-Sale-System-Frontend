@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Card, Form, Button } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import TextInput from '../components/TextInput'; // Adjust the path as needed
+import TextInput from '../components/TextInput'; 
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -21,8 +21,7 @@ function Login() {
       const user = users.find(user => user.username === username && user.password === password);
 
       if (user) {
-        // If the user is found and the password matches, navigate to the next page
-        navigate('/signup'); // Adjust the path as needed
+        navigate('/category'); 
       } else {
         setError('Invalid username or password');
       }
