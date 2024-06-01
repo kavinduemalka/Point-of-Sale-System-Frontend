@@ -4,11 +4,13 @@ import Signup from './pages/Signup';
 import CategoryPage from './pages/Category';
 import ItemsPage from './pages/Items';
 import Stockspage from './pages/Stocks';
+import NavBar from './components/NavigationBar';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
   return (
    <BrowserRouter>
+   <NavBar />
       <Routes>
         <Route path='/' element={<Login />} />
         <Route path='/signup' element={<Signup />} />
