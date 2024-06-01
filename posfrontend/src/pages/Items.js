@@ -59,12 +59,22 @@ function ItemsPage() {
     setItemCategoryId(item.itemCategory.id);
   };
 
+  const handleAdd = () => {
+    setEditingItem(null);
+    setShowForm(true);
+    setItemId('');
+    setItemName('');
+    setPrice('');
+    setStockQuantity('');
+    setItemCategoryId('');
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setShowForm(false);
     if (editingItem) {
       try {
-        await axios.put(`http://localhost:8800/item/${editingItem.id}`, {
+        await axios.put(`http://localhost:8800/items/${editingItem.id}`, {
           itemId,
           itemName,
           price,
@@ -89,6 +99,10 @@ function ItemsPage() {
         console.error('Error creating item:', error);
       }
     }
+    resetForm();
+  };
+
+  const resetForm = () => {
     setEditingItem(null);
     setItemId('');
     setItemName('');
@@ -97,10 +111,15 @@ function ItemsPage() {
     setItemCategoryId('');
   };
 
+  const handleClose = () => {
+    setShowForm(false);
+    resetForm();
+  };
+
   return (
     <div>
       <h1>Items</h1>
-      <Button variant="primary" onClick={() => setShowForm(true)}>
+      <Button variant="primary" onClick={handleAdd}>
         Add Item
       </Button>
       <Table striped bordered hover className="mt-3">
@@ -136,7 +155,7 @@ function ItemsPage() {
           ))}
         </tbody>
       </Table>
-      <Modal show={showForm} onHide={() => setShowForm(false)}>
+      <Modal show={showForm} onHide={handleClose}>
         <Modal.Header closeButton>
           <Modal.Title>{editingItem ? 'Edit Item' : 'Add Item'}</Modal.Title>
         </Modal.Header>
@@ -193,7 +212,7 @@ function ItemsPage() {
                 ))}
               </Form.Control>
             </Form.Group>
-            <Button variant="primary" type="submit">
+            <Button variant="primary" type="submit" className="mt-3">
               Save
             </Button>
           </Form>
