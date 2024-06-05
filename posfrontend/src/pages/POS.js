@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Table, Form, Card } from 'react-bootstrap';
+import { Button, Table, Form, Card, Modal, Row, Col } from 'react-bootstrap';
 import axios from 'axios';
+import jsPDF from 'jspdf';
 
 function POSPage() {
   const [items, setItems] = useState([]);
@@ -8,7 +9,8 @@ function POSPage() {
   const [totalAmount, setTotalPrice] = useState(0);
   const [selectedItem, setSelectedItem] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [user, setUser] = useState(null); 
+  const [user, setUser] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -26,7 +28,7 @@ function POSPage() {
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get('http://localhost:8800/users/1'); 
+      const response = await axios.get('http://localhost:8800/users/1');
       setUser(response.data);
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -36,7 +38,7 @@ function POSPage() {
   const generateInvoiceId = async () => {
     try {
       const response = await axios.get('http://localhost:8800/invoices/max-id');
-      const maxInvoiceId = response.data; 
+      const maxInvoiceId = response.data;
       const newInvoiceId = `INV-${String(maxInvoiceId + 1).padStart(3, '0')}`;
       return newInvoiceId;
     } catch (error) {
@@ -63,26 +65,24 @@ function POSPage() {
   const handleCheckout = async () => {
     const newInvoiceId = await generateInvoiceId();
     if (!newInvoiceId) {
-      return; 
+      return;
     }
-  
+
     if (!user) {
       console.error('User not found');
       return;
     }
-  
+
     try {
-      // Create the invoice
       const invoiceData = {
         invoiceId: newInvoiceId,
         createdAt: new Date().toISOString(),
         totalAmount: totalAmount,
-        userId: user.id // Pass the user ID
+        user : {id : user.id}
       };
       const invoiceResponse = await axios.post('http://localhost:8800/invoices', invoiceData);
       console.log('Invoice created:', invoiceResponse.data);
-  
-      // Update the invoice item table with the cart items
+
       for (const cartItem of cart) {
         const invoiceItemData = {
           invoice: {
@@ -95,15 +95,31 @@ function POSPage() {
         };
         await axios.post('http://localhost:8800/invoiceitems', invoiceItemData);
       }
-  
-      // Clear the cart and reset total amount
+      generatePDF();
       setCart([]);
       setTotalPrice(0);
+      setShowSuccessModal(true);
+      console.log('Show success modal state:', showSuccessModal); // Debugging log
     } catch (error) {
       console.error('Error creating invoice:', error);
     }
   };
-  
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    doc.text('Invoice', 20, 20);
+    doc.autoTable({
+      head: [['ID', 'Item Name', 'Price', 'Quantity', 'Total']],
+      body: cart.map(item => [item.id, item.itemName, item.price, item.quantity, item.price * item.quantity]),
+    });
+    doc.text(`Total: $${totalAmount.toFixed(2)}`, 20, doc.lastAutoTable.finalY + 10);
+    doc.save('invoice.pdf');
+  };
+
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
+  };
+
   return (
     <div>
       <h1>Point of Sale (POS)</h1>
@@ -111,59 +127,76 @@ function POSPage() {
       <Card className="my-4 p-4">
         <h2>Add to Cart</h2>
         <Form>
-          <Form.Group controlId="formItem">
-            <Form.Label>Select Item</Form.Label>
-            <Form.Control as="select" value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)}>
-              <option value="">Select Item</option>
-              {items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.itemName} - ${item.price}
-                </option>
-              ))}
-            </Form.Control>
-          </Form.Group>
-
-          <Form.Group controlId="formQuantity">
-            <Form.Label>Quantity</Form.Label>
-            <Form.Control type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-          </Form.Group>
-
+          <Row>
+            <Col md={6}>
+              <Form.Group controlId="formItem">
+                <Form.Label>Select Item</Form.Label>
+                <Form.Control as="select" value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)}>
+                  <option value="">Select Item</option>
+                  {items.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.itemName} - ${item.price}
+                    </option>
+                  ))}
+                </Form.Control>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group controlId="formQuantity">
+                <Form.Label>Quantity</Form.Label>
+                <Form.Control type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+              </Form.Group>
+            </Col>
+          </Row>
+          <div className="mb-3"></div>
           <Button variant="primary" onClick={handleAddToCart}>Add to Cart</Button>
         </Form>
       </Card>
 
       <Card className="my-4 p-4">
-      <h2>Shopping Cart</h2>
-      <Table striped bordered hover className="mt-3">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Item Name</th>
-            <th>Price</th>
-            <th>Quantity</th>
-            <th>Total</th>
-            <th>Remove from Cart</th>
-          </tr>
-        </thead>
-        <tbody>
-          {cart.map((item) => (
-            <tr key={item.id}>
-              <td>{item.id}</td>
-              <td>{item.itemName}</td>
-              <td>{item.price}</td>
-              <td>{item.quantity}</td>
-              <td>${item.price * item.quantity}</td>
-              <td>
-                <Button variant="danger" onClick={() => handleRemoveFromCart(item)}>Remove</Button>
-              </td>
+        <h2>Shopping Cart</h2>
+        <Table striped bordered hover className="mt-3">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Item Name</th>
+              <th>Price</th>
+              <th>Quantity</th>
+              <th>Total</th>
+              <th>Remove from Cart</th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {cart.map((item) => (
+              <tr key={item.id}>
+                <td>{item.id}</td>
+                <td>{item.itemName}</td>
+                <td>{item.price}</td>
+                <td>{item.quantity}</td>
+                <td>${item.price * item.quantity}</td>
+                <td>
+                  <Button variant="danger" onClick={() => handleRemoveFromCart(item)}>Remove</Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       </Card>
 
       <h3>Total Price: ${totalAmount.toFixed(2)}</h3>
       <Button variant="success" onClick={handleCheckout}>Checkout</Button>
+
+      <Modal show={showSuccessModal} onHide={handleCloseSuccessModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Success</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>Invoice created successfully!</Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseSuccessModal}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }
