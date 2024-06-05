@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Table, Form, Card, Modal, Row, Col } from 'react-bootstrap';
 import axios from 'axios';
-import jsPDF from 'jspdf';
+import '../assets/CSS/POS.css'
 
 function POSPage() {
   const [items, setItems] = useState([]);
@@ -71,14 +71,15 @@ function POSPage() {
       setShowErrorModal(true);
       return;
     }
-
+  
     if (!user) {
       setErrorMessage('User not found');
       setShowErrorModal(true);
       return;
     }
-
+  
     try {
+
       const invoiceData = {
         invoiceId: newInvoiceId,
         createdAt: new Date().toISOString(),
@@ -87,8 +88,13 @@ function POSPage() {
       };
       const invoiceResponse = await axios.post('http://localhost:8800/invoices', invoiceData);
       console.log('Invoice created:', invoiceResponse.data);
-
+  
       for (const cartItem of cart) {
+        const updatedStockQuantity = cartItem.stockQuantity - cartItem.quantity;
+        await axios.put(`http://localhost:8800/items/${cartItem.id}`, {
+          ...cartItem,
+          stockQuantity: updatedStockQuantity
+        });
         const invoiceItemData = {
           invoice: {
             id: invoiceResponse.data.id
@@ -100,6 +106,7 @@ function POSPage() {
         };
         await axios.post('http://localhost:8800/invoiceitems', invoiceItemData);
       }
+  
       setCart([]);
       setTotalPrice(0);
       setShowSuccessModal(true);
@@ -109,6 +116,7 @@ function POSPage() {
       setShowErrorModal(true);
     }
   };
+  
 
   const handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
@@ -181,8 +189,10 @@ function POSPage() {
         </Table>
       </Card>
 
-      <h3>Total Price: ${totalAmount.toFixed(2)}</h3>
-      <Button variant="success" onClick={handleCheckout}>Checkout</Button>
+      <div className="checkout-container">
+        <h3>Total Price: ${totalAmount.toFixed(2)}</h3>
+        <Button variant="success" onClick={handleCheckout}>Checkout</Button>
+      </div>
 
       {/* Success Modal */}
       <Modal show={showSuccessModal} onHide={handleCloseSuccessModal}>
