@@ -31,6 +31,11 @@ function NavBar() {
                     <Nav.Link>Stocks</Nav.Link>
                 </LinkContainer>
             </Nav.Item>
+            <Nav.Item>
+                <LinkContainer to="/pos">
+                    <Nav.Link>POS</Nav.Link>
+                </LinkContainer>
+            </Nav.Item>
         </Nav>
     );
 }

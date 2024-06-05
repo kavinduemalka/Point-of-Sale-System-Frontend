@@ -5,6 +5,7 @@ import CategoryPage from './pages/Category';
 import ItemsPage from './pages/Items';
 import Stockspage from './pages/Stocks';
 import NavBar from './components/NavigationBar';
+import POSPage from './pages/POS';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
         <Route path='/category' element={<CategoryPage />} />
         <Route path='/items' element={<ItemsPage />} />
         <Route path='/stocks' element={<Stockspage />} />
+        <Route path='/pos' element={<POSPage />} />
       </Routes> 
    </BrowserRouter>
   );
