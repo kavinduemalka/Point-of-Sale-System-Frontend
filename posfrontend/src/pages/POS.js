@@ -11,6 +11,8 @@ function POSPage() {
   const [quantity, setQuantity] = useState(1);
   const [user, setUser] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     fetchItems();
@@ -65,11 +67,14 @@ function POSPage() {
   const handleCheckout = async () => {
     const newInvoiceId = await generateInvoiceId();
     if (!newInvoiceId) {
+      setErrorMessage('Error generating invoice ID');
+      setShowErrorModal(true);
       return;
     }
 
     if (!user) {
-      console.error('User not found');
+      setErrorMessage('User not found');
+      setShowErrorModal(true);
       return;
     }
 
@@ -78,7 +83,7 @@ function POSPage() {
         invoiceId: newInvoiceId,
         createdAt: new Date().toISOString(),
         totalAmount: totalAmount,
-        user : {id : user.id}
+        userId: user.id
       };
       const invoiceResponse = await axios.post('http://localhost:8800/invoices', invoiceData);
       console.log('Invoice created:', invoiceResponse.data);
@@ -95,29 +100,22 @@ function POSPage() {
         };
         await axios.post('http://localhost:8800/invoiceitems', invoiceItemData);
       }
-      generatePDF();
       setCart([]);
       setTotalPrice(0);
       setShowSuccessModal(true);
-      console.log('Show success modal state:', showSuccessModal); // Debugging log
     } catch (error) {
       console.error('Error creating invoice:', error);
+      setErrorMessage('Error creating invoice. Please try again.');
+      setShowErrorModal(true);
     }
-  };
-
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    doc.text('Invoice', 20, 20);
-    doc.autoTable({
-      head: [['ID', 'Item Name', 'Price', 'Quantity', 'Total']],
-      body: cart.map(item => [item.id, item.itemName, item.price, item.quantity, item.price * item.quantity]),
-    });
-    doc.text(`Total: $${totalAmount.toFixed(2)}`, 20, doc.lastAutoTable.finalY + 10);
-    doc.save('invoice.pdf');
   };
 
   const handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
+  };
+
+  const handleCloseErrorModal = () => {
+    setShowErrorModal(false);
   };
 
   return (
@@ -186,6 +184,7 @@ function POSPage() {
       <h3>Total Price: ${totalAmount.toFixed(2)}</h3>
       <Button variant="success" onClick={handleCheckout}>Checkout</Button>
 
+      {/* Success Modal */}
       <Modal show={showSuccessModal} onHide={handleCloseSuccessModal}>
         <Modal.Header closeButton>
           <Modal.Title>Success</Modal.Title>
@@ -193,6 +192,19 @@ function POSPage() {
         <Modal.Body>Invoice created successfully!</Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleCloseSuccessModal}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal show={showErrorModal} onHide={handleCloseErrorModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Error</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>{errorMessage}</Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseErrorModal}>
             Close
           </Button>
         </Modal.Footer>
