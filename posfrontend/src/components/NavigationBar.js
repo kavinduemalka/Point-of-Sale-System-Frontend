@@ -7,16 +7,6 @@ function NavBar() {
     return (
         <Nav variant="tabs" defaultActiveKey="/">
             <Nav.Item>
-                <LinkContainer to="/">
-                    <Nav.Link>Login</Nav.Link>
-                </LinkContainer>
-            </Nav.Item>
-            <Nav.Item>
-                <LinkContainer to="/signup">
-                    <Nav.Link>Signup</Nav.Link>
-                </LinkContainer>
-            </Nav.Item>
-            <Nav.Item>
                 <LinkContainer to="/category">
                     <Nav.Link>Categories</Nav.Link>
                 </LinkContainer>

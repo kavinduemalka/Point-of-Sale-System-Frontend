@@ -21,7 +21,7 @@ function Login() {
       const user = users.find(user => user.username === username && user.password === password);
 
       if (user) {
-        navigate('/category'); 
+        navigate('/pos'); 
       } else {
         setError('Invalid username or password');
       }

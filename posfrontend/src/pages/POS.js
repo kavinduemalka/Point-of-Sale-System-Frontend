@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Table, Form, Card, Modal, Row, Col } from 'react-bootstrap';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import '../assets/CSS/POS.css'
 
 function POSPage() {
@@ -13,6 +14,8 @@ function POSPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const navigate = useNavigate(); 
 
   useEffect(() => {
     fetchItems();
@@ -71,15 +74,15 @@ function POSPage() {
       setShowErrorModal(true);
       return;
     }
-  
+
     if (!user) {
       setErrorMessage('User not found');
       setShowErrorModal(true);
       return;
     }
-  
-    try {
 
+    try {
+      // Create invoice
       const invoiceData = {
         invoiceId: newInvoiceId,
         createdAt: new Date().toISOString(),
@@ -88,13 +91,17 @@ function POSPage() {
       };
       const invoiceResponse = await axios.post('http://localhost:8800/invoices', invoiceData);
       console.log('Invoice created:', invoiceResponse.data);
-  
+
+      // Reduce stock and create invoice items
       for (const cartItem of cart) {
+        // Update stock quantity
         const updatedStockQuantity = cartItem.stockQuantity - cartItem.quantity;
         await axios.put(`http://localhost:8800/items/${cartItem.id}`, {
           ...cartItem,
           stockQuantity: updatedStockQuantity
         });
+
+        // Create invoice item
         const invoiceItemData = {
           invoice: {
             id: invoiceResponse.data.id
@@ -106,7 +113,12 @@ function POSPage() {
         };
         await axios.post('http://localhost:8800/invoiceitems', invoiceItemData);
       }
-  
+
+      // Set state and show confirmation modal
+      navigate('/checkout', {
+        state: { cart, totalAmount, invoiceId: newInvoiceId }
+      });
+
       setCart([]);
       setTotalPrice(0);
       setShowSuccessModal(true);
@@ -116,7 +128,15 @@ function POSPage() {
       setShowErrorModal(true);
     }
   };
-  
+
+  const handleShowConfirmationModal = () => {
+    setShowConfirmationModal(true);
+  };
+
+  const handleConfirmCheckout = () => {
+    setShowConfirmationModal(false);
+    handleCheckout();
+  };
 
   const handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
@@ -124,6 +144,10 @@ function POSPage() {
 
   const handleCloseErrorModal = () => {
     setShowErrorModal(false);
+  };
+
+  const handleCloseConfirmationModal = () => {
+    setShowConfirmationModal(false);
   };
 
   return (
@@ -191,8 +215,24 @@ function POSPage() {
 
       <div className="checkout-container">
         <h3>Total Price: ${totalAmount.toFixed(2)}</h3>
-        <Button variant="success" onClick={handleCheckout}>Checkout</Button>
+        <Button variant="success" onClick={handleShowConfirmationModal}>Checkout</Button>
       </div>
+
+      {/* Confirmation Modal */}
+      <Modal show={showConfirmationModal} onHide={handleCloseConfirmationModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Checkout</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>Are you sure you want to proceed with the checkout?</Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseConfirmationModal}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleConfirmCheckout}>
+            Confirm
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Success Modal */}
       <Modal show={showSuccessModal} onHide={handleCloseSuccessModal}>
