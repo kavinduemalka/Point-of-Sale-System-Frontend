@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Button, Table, Modal, Form } from 'react-bootstrap';
+import { Button, Table, Modal, Form, Container } from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import '../assets/CSS/TablePage.CSS'; 
 
 function ItemsPage() {
   const [items, setItems] = useState([]);
@@ -40,12 +42,12 @@ function ItemsPage() {
     const confirmDelete = window.confirm('Are you sure you want to delete this item?');
     
     if (confirmDelete) {
-        try {
-            await axios.delete(`http://localhost:8800/items/${id}`);
-            fetchItems();
-        } catch (error) {
-            console.error('Error deleting item:', error);
-        }
+      try {
+        await axios.delete(`http://localhost:8800/items/${id}`);
+        fetchItems();
+      } catch (error) {
+        console.error('Error deleting item:', error);
+      }
     }
   };
 
@@ -117,13 +119,13 @@ function ItemsPage() {
   };
 
   return (
-    <div>
-      <h1>Items</h1>
-      <Button variant="primary" onClick={handleAdd}>
+    <Container className="mt-5">
+      <h1 className="text-center mb-4">Items</h1>
+      <Button variant="primary" className="mb-3" onClick={handleAdd}>
         Add Item
       </Button>
-      <Table striped bordered hover className="mt-3">
-        <thead>
+      <Table striped bordered hover responsive className="table-custom">
+        <thead className="thead-dark">
           <tr>
             <th>ID</th>
             <th>Item ID</th>
@@ -144,7 +146,7 @@ function ItemsPage() {
               <td>{item.stockQuantity}</td>
               <td>{item.itemCategory.categoryName}</td>
               <td>
-                <Button variant="secondary" onClick={() => handleEdit(item)}>
+                <Button variant="secondary" className="me-2" onClick={() => handleEdit(item)}>
                   Edit
                 </Button>
                 <Button variant="danger" onClick={() => handleDelete(item.id)}>
@@ -155,54 +157,59 @@ function ItemsPage() {
           ))}
         </tbody>
       </Table>
-      <Modal show={showForm} onHide={handleClose}>
+      <Modal show={showForm} onHide={handleClose} centered>
         <Modal.Header closeButton>
           <Modal.Title>{editingItem ? 'Edit Item' : 'Add Item'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSave}>
-            <Form.Group controlId="formItemId">
+            <Form.Group controlId="formItemId" className="mb-3">
               <Form.Label>Item ID</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Enter item ID"
                 value={itemId}
                 onChange={(e) => setItemId(e.target.value)}
+                required
               />
             </Form.Group>
-            <Form.Group controlId="formItemName">
+            <Form.Group controlId="formItemName" className="mb-3">
               <Form.Label>Item Name</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Enter item name"
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
+                required
               />
             </Form.Group>
-            <Form.Group controlId="formPrice">
+            <Form.Group controlId="formPrice" className="mb-3">
               <Form.Label>Price</Form.Label>
               <Form.Control
                 type="number"
                 placeholder="Enter price"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
+                required
               />
             </Form.Group>
-            <Form.Group controlId="formStockQuantity">
+            <Form.Group controlId="formStockQuantity" className="mb-3">
               <Form.Label>Stock Quantity</Form.Label>
               <Form.Control
                 type="number"
                 placeholder="Enter stock quantity"
                 value={stockQuantity}
                 onChange={(e) => setStockQuantity(e.target.value)}
+                required
               />
             </Form.Group>
-            <Form.Group controlId="formItemCategoryId">
+            <Form.Group controlId="formItemCategoryId" className="mb-3">
               <Form.Label>Category</Form.Label>
               <Form.Control
                 as="select"
                 value={itemCategoryId}
                 onChange={(e) => setItemCategoryId(e.target.value)}
+                required
               >
                 <option value="">Select Category</option>
                 {categories.map((category) => (
@@ -212,13 +219,13 @@ function ItemsPage() {
                 ))}
               </Form.Control>
             </Form.Group>
-            <Button variant="primary" type="submit" className="mt-3">
+            <Button variant="primary" type="submit" className="w-100 mt-3">
               Save
             </Button>
           </Form>
         </Modal.Body>
       </Modal>
-    </div>
+    </Container>
   );
 }
 
