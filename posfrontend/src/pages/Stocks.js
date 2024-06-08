@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Button, Table, Modal, Form } from 'react-bootstrap';
+import { Button, Table, Modal, Form, Container } from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import '../assets/CSS/TablePage.CSS'; 
 
 function Stockspage() {
   const [stocks, setStocks] = useState([]);
@@ -83,13 +85,13 @@ function Stockspage() {
   };
 
   return (
-    <div>
-      <h1>Stocks</h1>
-      <Button variant="primary" onClick={() => setShowForm(true)}>
+    <Container className="mt-5">
+      <h1 className="text-center mb-4">Stocks</h1>
+      <Button variant="primary" className="mb-3" onClick={() => setShowForm(true)}>
         Add Stock
       </Button>
-      <Table striped bordered hover className="mt-3">
-        <thead>
+      <Table striped bordered hover responsive className="table-custom">
+        <thead className="thead-dark">
           <tr>
             <th>ID</th>
             <th>Item Name</th>
@@ -106,7 +108,7 @@ function Stockspage() {
               <td>{stock.quantity}</td>
               <td>{stock.lastUpdated}</td>
               <td>
-                <Button variant="secondary" onClick={() => handleEdit(stock)}>
+                <Button variant="secondary" className="me-2" onClick={() => handleEdit(stock)}>
                   Edit
                 </Button>
                 <Button variant="danger" onClick={() => handleDelete(stock.id)}>
@@ -117,18 +119,19 @@ function Stockspage() {
           ))}
         </tbody>
       </Table>
-      <Modal show={showForm} onHide={() => setShowForm(false)}>
+      <Modal show={showForm} onHide={() => setShowForm(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>{editingStock ? 'Edit Stock' : 'Add Stock'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSave}>
-            <Form.Group controlId="formItemId">
+            <Form.Group controlId="formItemId" className="mb-3">
               <Form.Label>Item</Form.Label>
               <Form.Control
                 as="select"
                 value={itemId}
                 onChange={(e) => setItemId(e.target.value)}
+                required
               >
                 <option value="">Select Item</option>
                 {items.map((item) => (
@@ -138,22 +141,23 @@ function Stockspage() {
                 ))}
               </Form.Control>
             </Form.Group>
-            <Form.Group controlId="formQuantity">
+            <Form.Group controlId="formQuantity" className="mb-3">
               <Form.Label>Quantity</Form.Label>
               <Form.Control
                 type="number"
                 placeholder="Enter quantity"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
+                required
               />
             </Form.Group>
-            <Button variant="primary" type="submit">
+            <Button variant="primary" type="submit" className="w-100">
               Save
             </Button>
           </Form>
         </Modal.Body>
       </Modal>
-    </div>
+    </Container>
   );
 }
 

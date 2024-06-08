@@ -1,73 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import { Button, Table, Form, Card, Modal, Row, Col } from 'react-bootstrap';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Button, Table, Form, Card, Modal, Row, Col, Spinner, ToastContainer, Toast } from 'react-bootstrap';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import '../assets/CSS/POS.css'
+import '../assets/CSS/POS.css';
 
-function POSPage() {
+const POSPage = () => {
   const [items, setItems] = useState([]);
   const [cart, setCart] = useState([]);
-  const [totalAmount, setTotalPrice] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [user, setUser] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const navigate = useNavigate(); 
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchItems();
-    fetchUser();
+    const fetchData = async () => {
+      try {
+        const [itemsResponse, userResponse] = await Promise.all([
+          axios.get('http://localhost:8800/items'),
+          axios.get('http://localhost:8800/users/1'),
+        ]);
+        setItems(itemsResponse.data);
+        setUser(userResponse.data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setErrorMessage('Error fetching data. Please try again.');
+        setShowErrorModal(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
-
-  const fetchItems = async () => {
-    try {
-      const response = await axios.get('http://localhost:8800/items');
-      setItems(response.data);
-    } catch (error) {
-      console.error('Error fetching items:', error);
-    }
-  };
-
-  const fetchUser = async () => {
-    try {
-      const response = await axios.get('http://localhost:8800/users/1');
-      setUser(response.data);
-    } catch (error) {
-      console.error('Error fetching user:', error);
-    }
-  };
 
   const generateInvoiceId = async () => {
     try {
       const response = await axios.get('http://localhost:8800/invoices/max-id');
       const maxInvoiceId = response.data;
-      const newInvoiceId = `INV-${String(maxInvoiceId + 1).padStart(3, '0')}`;
-      return newInvoiceId;
+      return `INV-${String(maxInvoiceId + 1).padStart(3, '0')}`;
     } catch (error) {
       console.error('Error generating invoice ID:', error);
       return null;
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = useCallback(() => {
+    if (!selectedItem || quantity <= 0) return;
+
     const item = items.find((item) => item.id === parseInt(selectedItem));
     if (item) {
-      const itemToAdd = { ...item, quantity };
-      setCart([...cart, itemToAdd]);
-      setTotalPrice(totalAmount + itemToAdd.price * quantity);
+      const existingItem = cart.find((cartItem) => cartItem.id === item.id);
+      if (existingItem) {
+        existingItem.quantity += quantity;
+        setCart([...cart]);
+      } else {
+        setCart([...cart, { ...item, quantity }]);
+      }
+      setToastMessage(`${item.itemName} added to cart`);
+      setShowToast(true);
     }
-  };
+  }, [selectedItem, quantity, items, cart]);
 
-  const handleRemoveFromCart = (itemToRemove) => {
-    const newCart = cart.filter((item) => item.id !== itemToRemove.id);
-    setCart(newCart);
-    setTotalPrice(totalAmount - itemToRemove.price * itemToRemove.quantity);
-  };
+  const handleRemoveFromCart = useCallback((itemToRemove) => {
+    setCart(cart.filter((item) => item.id !== itemToRemove.id));
+    setToastMessage(`${itemToRemove.itemName} removed from cart`);
+    setShowToast(true);
+  }, [cart]);
 
-  const handleCheckout = async () => {
+  const totalAmount = useMemo(() => {
+    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  }, [cart]);
+
+  const handleCheckout = useCallback(async () => {
     const newInvoiceId = await generateInvoiceId();
     if (!newInvoiceId) {
       setErrorMessage('Error generating invoice ID');
@@ -82,52 +92,45 @@ function POSPage() {
     }
 
     try {
-      // Create invoice
       const invoiceData = {
         invoiceId: newInvoiceId,
         createdAt: new Date().toISOString(),
-        totalAmount: totalAmount,
-        userId: user.id
+        totalAmount: parseFloat(totalAmount),
+        userId: user.id,
       };
       const invoiceResponse = await axios.post('http://localhost:8800/invoices', invoiceData);
-      console.log('Invoice created:', invoiceResponse.data);
 
-      // Reduce stock and create invoice items
       for (const cartItem of cart) {
-        // Update stock quantity
         const updatedStockQuantity = cartItem.stockQuantity - cartItem.quantity;
         await axios.put(`http://localhost:8800/items/${cartItem.id}`, {
           ...cartItem,
-          stockQuantity: updatedStockQuantity
+          stockQuantity: updatedStockQuantity,
         });
 
-        // Create invoice item
         const invoiceItemData = {
           invoice: {
-            id: invoiceResponse.data.id
+            id: invoiceResponse.data.id,
           },
           item: {
-            id: cartItem.id
+            id: cartItem.id,
           },
-          quantity: cartItem.quantity
+          quantity: cartItem.quantity,
         };
         await axios.post('http://localhost:8800/invoiceitems', invoiceItemData);
       }
 
-      // Set state and show confirmation modal
       navigate('/checkout', {
-        state: { cart, totalAmount, invoiceId: newInvoiceId }
+        state: { cart, totalAmount, invoiceId: newInvoiceId },
       });
 
       setCart([]);
-      setTotalPrice(0);
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Error creating invoice:', error);
       setErrorMessage('Error creating invoice. Please try again.');
       setShowErrorModal(true);
     }
-  };
+  }, [cart, totalAmount, user, navigate]);
 
   const handleShowConfirmationModal = () => {
     setShowConfirmationModal(true);
@@ -150,9 +153,22 @@ function POSPage() {
     setShowConfirmationModal(false);
   };
 
+  const handleCloseToast = () => {
+    setShowToast(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center">
+        <Spinner animation="border" />
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <h1>Point of Sale (POS)</h1>
+    <div className="container">
+      <h1 className="text-center my-4">Point of Sale System</h1>
 
       <Card className="my-4 p-4">
         <h2>Add to Cart</h2>
@@ -161,7 +177,11 @@ function POSPage() {
             <Col md={6}>
               <Form.Group controlId="formItem">
                 <Form.Label>Select Item</Form.Label>
-                <Form.Control as="select" value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)}>
+                <Form.Control
+                  as="select"
+                  value={selectedItem}
+                  onChange={(e) => setSelectedItem(e.target.value)}
+                >
                   <option value="">Select Item</option>
                   {items.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -174,12 +194,17 @@ function POSPage() {
             <Col md={6}>
               <Form.Group controlId="formQuantity">
                 <Form.Label>Quantity</Form.Label>
-                <Form.Control type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+                <Form.Control
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Number(e.target.value))}
+                />
               </Form.Group>
             </Col>
           </Row>
-          <div className="mb-3"></div>
-          <Button variant="primary" onClick={handleAddToCart}>Add to Cart</Button>
+          <Button variant="primary" onClick={handleAddToCart} className="mt-3">
+            Add to Cart
+          </Button>
         </Form>
       </Card>
 
@@ -193,7 +218,7 @@ function POSPage() {
               <th>Price</th>
               <th>Quantity</th>
               <th>Total</th>
-              <th>Remove from Cart</th>
+              <th>Remove</th>
             </tr>
           </thead>
           <tbody>
@@ -201,11 +226,13 @@ function POSPage() {
               <tr key={item.id}>
                 <td>{item.id}</td>
                 <td>{item.itemName}</td>
-                <td>{item.price}</td>
+                <td>${item.price}</td>
                 <td>{item.quantity}</td>
-                <td>${item.price * item.quantity}</td>
+                <td>${(item.price * item.quantity)}</td>
                 <td>
-                  <Button variant="danger" onClick={() => handleRemoveFromCart(item)}>Remove</Button>
+                  <Button variant="danger" onClick={() => handleRemoveFromCart(item)}>
+                    Remove
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -213,12 +240,13 @@ function POSPage() {
         </Table>
       </Card>
 
-      <div className="checkout-container">
-        <h3>Total Price: ${totalAmount.toFixed(2)}</h3>
-        <Button variant="success" onClick={handleShowConfirmationModal}>Checkout</Button>
+      <div className="checkout-container text-center">
+        <h3>Total Price: ${totalAmount}</h3>
+        <Button variant="success" onClick={handleShowConfirmationModal}>
+          Checkout
+        </Button>
       </div>
 
-      {/* Confirmation Modal */}
       <Modal show={showConfirmationModal} onHide={handleCloseConfirmationModal}>
         <Modal.Header closeButton>
           <Modal.Title>Confirm Checkout</Modal.Title>
@@ -234,7 +262,6 @@ function POSPage() {
         </Modal.Footer>
       </Modal>
 
-      {/* Success Modal */}
       <Modal show={showSuccessModal} onHide={handleCloseSuccessModal}>
         <Modal.Header closeButton>
           <Modal.Title>Success</Modal.Title>
@@ -247,7 +274,6 @@ function POSPage() {
         </Modal.Footer>
       </Modal>
 
-      {/* Error Modal */}
       <Modal show={showErrorModal} onHide={handleCloseErrorModal}>
         <Modal.Header closeButton>
           <Modal.Title>Error</Modal.Title>
@@ -259,8 +285,18 @@ function POSPage() {
           </Button>
         </Modal.Footer>
       </Modal>
+
+
+      <ToastContainer position="top-end" className="p-3">
+        <Toast onClose={handleCloseToast} show={showToast} delay={3000} autohide>
+          <Toast.Header>
+            <strong className="me-auto">Notification</strong>
+          </Toast.Header>
+          <Toast.Body>{toastMessage}</Toast.Body>
+        </Toast>
+      </ToastContainer>
     </div>
   );
-}
+};
 
 export default POSPage;

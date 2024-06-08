@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Button, Table, Modal, Form } from 'react-bootstrap';
+import { Button, Table, Modal, Form, Container } from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import '../assets/CSS/TablePage.CSS'; 
 
 function CategoryPage() {
   const [categories, setCategories] = useState([]);
@@ -24,18 +26,17 @@ function CategoryPage() {
   };
 
   const handleDelete = async (id) => {
-    // Display confirmation dialog before deleting
     const confirmDelete = window.confirm('Are you sure you want to delete this category?');
-    
     if (confirmDelete) {
-        try {
-            await axios.delete(`http://localhost:8800/category/${id}`);
-            fetchCategories();
-        } catch (error) {
-            console.error('Error deleting category:', error);
-        }
+      try {
+        await axios.delete(`http://localhost:8800/category/${id}`);
+        fetchCategories();
+      } catch (error) {
+        console.error('Error deleting category:', error);
+      }
     }
-};
+  };
+
   const handleEdit = (category) => {
     setEditingCategory(category);
     setShowForm(true);
@@ -77,13 +78,13 @@ function CategoryPage() {
   };
 
   return (
-    <div>
-      <h1>Categories</h1>
-      <Button variant="primary" onClick={() => setShowForm(true)}>
+    <Container className="mt-5">
+      <h1 className="text-center mb-4">Categories</h1>
+      <Button variant="primary" className="mb-3" onClick={() => setShowForm(true)}>
         Add Category
       </Button>
-      <Table striped bordered hover className="mt-3">
-        <thead>
+      <Table striped bordered hover responsive className="table-custom">
+        <thead className="thead-dark">
           <tr>
             <th>ID</th>
             <th>Category ID</th>
@@ -100,7 +101,7 @@ function CategoryPage() {
               <td>{category.categoryName}</td>
               <td>{category.description}</td>
               <td>
-                <Button variant="secondary" onClick={() => handleEdit(category)}>
+                <Button variant="secondary" className="me-2" onClick={() => handleEdit(category)}>
                   Edit
                 </Button>
                 <Button variant="danger" onClick={() => handleDelete(category.id)}>
@@ -111,46 +112,49 @@ function CategoryPage() {
           ))}
         </tbody>
       </Table>
-      <Modal show={showForm} onHide={() => setShowForm(false)}>
+      <Modal show={showForm} onHide={() => setShowForm(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>{editingCategory ? 'Edit Category' : 'Add Category'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSave}>
-            <Form.Group controlId="formCategoryId">
+            <Form.Group controlId="formCategoryId" className="mb-3">
               <Form.Label>Category ID</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Enter category ID"
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
+                required
               />
             </Form.Group>
-            <Form.Group controlId="formCategoryName">
+            <Form.Group controlId="formCategoryName" className="mb-3">
               <Form.Label>Category Name</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Enter category name"
                 value={categoryName}
                 onChange={(e) => setCategoryName(e.target.value)}
+                required
               />
             </Form.Group>
-            <Form.Group controlId="formDescription">
+            <Form.Group controlId="formDescription" className="mb-3">
               <Form.Label>Description</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Enter description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                required
               />
             </Form.Group>
-            <Button variant="primary" type="submit">
+            <Button variant="primary" type="submit" className="w-100">
               Save
             </Button>
           </Form>
         </Modal.Body>
       </Modal>
-    </div>
+    </Container>
   );
 }
 
