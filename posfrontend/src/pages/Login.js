@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from "../utils/AuthContext";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Card, Form, Button, Container, Row, Col, Alert } from 'react-bootstrap';
@@ -11,25 +12,25 @@ function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    try {
-      const response = await axios.get('http://localhost:8800/users');
-      const users = response.data;
-      const user = users.find(user => user.username === username && user.password === password);
+    const data = {
+      username : username,
+      password : password
+    }
 
-      if (user) {
-        navigate('/pos'); 
-      } else {
-        setError('Invalid username or password');
-      }
-    } catch (error) {
+    axios.post('http://localhost:8800/auth/login', data)
+    .then(function (response){
+      login(response.data)
+      navigate("/pos");
+    }).catch (function (error) {
       console.error('Error fetching users:', error);
       setError('An error occurred while logging in. Please try again later.');
-    }
+    });
   };
 
   return (

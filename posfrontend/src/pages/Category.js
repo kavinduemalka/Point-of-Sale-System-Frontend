@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Button, Table, Modal, Form, Container } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/CSS/TablePage.CSS'; 
+import { useAuth } from '../utils/AuthContext';
 
 function CategoryPage() {
   const [categories, setCategories] = useState([]);
@@ -11,14 +12,23 @@ function CategoryPage() {
   const [categoryId, setCategoryId] = useState('');
   const [categoryName, setCategoryName] = useState('');
   const [description, setDescription] = useState('');
+  const { isAuthenticated, jwtToken } = useAuth();
+
+  const config = {
+    headers: {
+        Authorization: `Bearer ${jwtToken}`
+    }
+  };
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    if(isAuthenticated){
+      fetchCategories();
+    }
+  }, [isAuthenticated]); 
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get('http://localhost:8800/categories');
+      const response = await axios.get('http://localhost:8800/categories', config);
       setCategories(response.data);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -29,7 +39,7 @@ function CategoryPage() {
     const confirmDelete = window.confirm('Are you sure you want to delete this category?');
     if (confirmDelete) {
       try {
-        await axios.delete(`http://localhost:8800/category/${id}`);
+        await axios.delete(`http://localhost:8800/category/${id}`, config);
         fetchCategories();
       } catch (error) {
         console.error('Error deleting category:', error);
@@ -54,7 +64,7 @@ function CategoryPage() {
           categoryId,
           categoryName,
           description,
-        });
+        }, config);
         fetchCategories();
       } catch (error) {
         console.error('Error updating category:', error);
@@ -65,7 +75,7 @@ function CategoryPage() {
           categoryId,
           categoryName,
           description,
-        });
+        }, config);
         fetchCategories();
       } catch (error) {
         console.error('Error creating category:', error);

@@ -3,6 +3,7 @@ import { Button, Table, Form, Card, Modal, Row, Col, Spinner, ToastContainer, To
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import '../assets/CSS/POS.css';
+import { useAuth } from '../utils/AuthContext';
 
 const POSPage = () => {
   const [items, setItems] = useState([]);
@@ -18,43 +19,59 @@ const POSPage = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const navigate = useNavigate();
+  const { isAuthenticated, jwtToken } = useAuth();
+
+  const config = useMemo(() => ({
+    headers: {
+      Authorization: `Bearer ${jwtToken}`
+    }
+  }), [jwtToken]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [itemsResponse, userResponse] = await Promise.all([
-          axios.get('http://localhost:8800/items'),
-          axios.get('http://localhost:8800/users/1'),
-        ]);
+        const itemsResponse = await axios.get('http://localhost:8800/items', config);
         setItems(itemsResponse.data);
+  
+        const userResponse = await axios.get('http://localhost:8800/auth/users/1', config);
         setUser(userResponse.data);
       } catch (error) {
         console.error('Error fetching data:', error);
-        setErrorMessage('Error fetching data. Please try again.');
-        setShowErrorModal(true);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, []);
+  
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated, config]);
+  
 
-  const generateInvoiceId = async () => {
+  const generateInvoiceId = useCallback(async () => {
+    let maxInvoiceId ;
     try {
-      const response = await axios.get('http://localhost:8800/invoices/max-id');
-      const maxInvoiceId = response.data;
+      const response = await axios.get('http://localhost:8800/invoices/max-id', config);
+      maxInvoiceId = response.data
       return `INV-${String(maxInvoiceId + 1).padStart(3, '0')}`;
     } catch (error) {
-      console.error('Error generating invoice ID:', error);
-      return null;
+      maxInvoiceId = 0;
+      return `INV-${String(maxInvoiceId + 1).padStart(3, '0')}`;
     }
-  };
+  }, [config]);
+  
 
   const handleAddToCart = useCallback(() => {
     if (!selectedItem || quantity <= 0) return;
 
     const item = items.find((item) => item.id === parseInt(selectedItem));
     if (item) {
+      if (quantity > item.stockQuantity) {
+        setErrorMessage(`Insufficient stock for ${item.itemName}`);
+        setShowErrorModal(true);
+        return;
+      }
+
       const existingItem = cart.find((cartItem) => cartItem.id === item.id);
       if (existingItem) {
         existingItem.quantity += quantity;
@@ -98,14 +115,14 @@ const POSPage = () => {
         totalAmount: parseFloat(totalAmount),
         userId: user.id,
       };
-      const invoiceResponse = await axios.post('http://localhost:8800/invoices', invoiceData);
+      const invoiceResponse = await axios.post('http://localhost:8800/invoices', invoiceData, config);
 
       for (const cartItem of cart) {
         const updatedStockQuantity = cartItem.stockQuantity - cartItem.quantity;
         await axios.put(`http://localhost:8800/items/${cartItem.id}`, {
           ...cartItem,
           stockQuantity: updatedStockQuantity,
-        });
+        }, config);
 
         const invoiceItemData = {
           invoice: {
@@ -116,7 +133,7 @@ const POSPage = () => {
           },
           quantity: cartItem.quantity,
         };
-        await axios.post('http://localhost:8800/invoiceitems', invoiceItemData);
+        await axios.post('http://localhost:8800/invoiceitems', invoiceItemData, config);
       }
 
       navigate('/checkout', {
@@ -130,7 +147,7 @@ const POSPage = () => {
       setErrorMessage('Error creating invoice. Please try again.');
       setShowErrorModal(true);
     }
-  }, [cart, totalAmount, user, navigate]);
+  }, [cart, totalAmount, user, navigate, generateInvoiceId, config]);
 
   const handleShowConfirmationModal = () => {
     setShowConfirmationModal(true);
@@ -228,7 +245,7 @@ const POSPage = () => {
                 <td>{item.itemName}</td>
                 <td>${item.price}</td>
                 <td>{item.quantity}</td>
-                <td>${(item.price * item.quantity)}</td>
+                <td>${(item.price * item.quantity).toFixed(2)}</td>
                 <td>
                   <Button variant="danger" onClick={() => handleRemoveFromCart(item)}>
                     Remove
@@ -241,7 +258,7 @@ const POSPage = () => {
       </Card>
 
       <div className="checkout-container text-center">
-        <h3>Total Price: ${totalAmount}</h3>
+        <h3>Total Price: ${totalAmount.toFixed(2)}</h3>
         <Button variant="success" onClick={handleShowConfirmationModal}>
           Checkout
         </Button>
@@ -285,7 +302,6 @@ const POSPage = () => {
           </Button>
         </Modal.Footer>
       </Modal>
-
 
       <ToastContainer position="top-end" className="p-3">
         <Toast onClose={handleCloseToast} show={showToast} delay={3000} autohide>

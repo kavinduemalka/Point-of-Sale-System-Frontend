@@ -3,9 +3,13 @@ import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import { LinkContainer } from 'react-router-bootstrap';
 import Container from 'react-bootstrap/Container';
+import Button from 'react-bootstrap/Button';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { useAuth } from '../utils/AuthContext';
 
 function NavBar() {
+    const { isAuthenticated, logout } = useAuth();
+
     return (
         <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
             <Container>
@@ -25,9 +29,15 @@ function NavBar() {
                         <LinkContainer to="/pos">
                             <Nav.Link>POS</Nav.Link>
                         </LinkContainer>
-                        <LinkContainer to="/">
-                            <Nav.Link>Log out</Nav.Link>
-                        </LinkContainer>
+                    </Nav>
+                    <Nav>
+                        {isAuthenticated ? (
+                            <Button variant="outline-light" onClick={logout}>Logout</Button>
+                        ) : (
+                            <LinkContainer to="/login">
+                                <Button variant="outline-light">Login</Button>
+                            </LinkContainer>
+                        )}
                     </Nav>
                 </Navbar.Collapse>
             </Container>

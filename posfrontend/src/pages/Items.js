@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Button, Table, Modal, Form, Container } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/CSS/TablePage.CSS'; 
+import { useAuth } from '../utils/AuthContext';
 
 function ItemsPage() {
   const [items, setItems] = useState([]);
@@ -15,14 +16,24 @@ function ItemsPage() {
   const [stockQuantity, setStockQuantity] = useState('');
   const [itemCategoryId, setItemCategoryId] = useState('');
 
+  const { isAuthenticated, jwtToken } = useAuth();
+
+  const config = {
+    headers: {
+      Authorization: `Bearer ${jwtToken}`
+    }
+  };
+
   useEffect(() => {
-    fetchItems();
-    fetchCategories();
-  }, []);
+    if (isAuthenticated) {
+      fetchItems();
+      fetchCategories();
+    }
+  }, [isAuthenticated]);
 
   const fetchItems = async () => {
     try {
-      const response = await axios.get('http://localhost:8800/items');
+      const response = await axios.get('http://localhost:8800/items', config);
       setItems(response.data);
     } catch (error) {
       console.error('Error fetching items:', error);
@@ -31,7 +42,7 @@ function ItemsPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get('http://localhost:8800/categories');
+      const response = await axios.get('http://localhost:8800/categories', config);
       setCategories(response.data);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -43,7 +54,7 @@ function ItemsPage() {
     
     if (confirmDelete) {
       try {
-        await axios.delete(`http://localhost:8800/items/${id}`);
+        await axios.delete(`http://localhost:8800/items/${id}`, config);
         fetchItems();
       } catch (error) {
         console.error('Error deleting item:', error);
@@ -82,7 +93,7 @@ function ItemsPage() {
           price,
           stockQuantity,
           itemCategory: { id: itemCategoryId }
-        });
+        }, config);
         fetchItems();
       } catch (error) {
         console.error('Error updating item:', error);
@@ -95,7 +106,7 @@ function ItemsPage() {
           price,
           stockQuantity,
           itemCategory: { id: itemCategoryId }
-        });
+        }, config);
         fetchItems();
       } catch (error) {
         console.error('Error creating item:', error);

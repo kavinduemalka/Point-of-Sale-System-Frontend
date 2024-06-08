@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Button, Table, Modal, Form, Container } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import '../assets/CSS/TablePage.CSS'; 
+import '../assets/CSS/TablePage.CSS';
+import { useAuth } from '../utils/AuthContext';
 
 function Stockspage() {
   const [stocks, setStocks] = useState([]);
@@ -12,14 +13,24 @@ function Stockspage() {
   const [itemId, setItemId] = useState('');
   const [quantity, setQuantity] = useState('');
 
+  const { isAuthenticated, jwtToken } = useAuth();
+
+  const config = {
+    headers: {
+      Authorization: `Bearer ${jwtToken}`
+    }
+  };
+
   useEffect(() => {
-    fetchStocks();
-    fetchItems();
-  }, []);
+    if (isAuthenticated) {
+      fetchStocks();
+      fetchItems();
+    }
+  }, [isAuthenticated]);
 
   const fetchStocks = async () => {
     try {
-      const response = await axios.get('http://localhost:8800/stocks');
+      const response = await axios.get('http://localhost:8800/stocks', config);
       setStocks(response.data);
     } catch (error) {
       console.error('Error fetching stocks:', error);
@@ -28,7 +39,7 @@ function Stockspage() {
 
   const fetchItems = async () => {
     try {
-      const response = await axios.get('http://localhost:8800/items');
+      const response = await axios.get('http://localhost:8800/items', config);
       setItems(response.data);
     } catch (error) {
       console.error('Error fetching items:', error);
@@ -40,7 +51,7 @@ function Stockspage() {
 
     if (confirmDelete) {
       try {
-        await axios.delete(`http://localhost:8800/stocks/${id}`);
+        await axios.delete(`http://localhost:8800/stocks/${id}`, config);
         fetchStocks();
       } catch (error) {
         console.error('Error deleting stock:', error);
@@ -63,7 +74,7 @@ function Stockspage() {
         await axios.put(`http://localhost:8800/stocks/${editingStock.id}`, {
           item: { id: itemId },
           quantity,
-        });
+        }, config);
         fetchStocks();
       } catch (error) {
         console.error('Error updating stock:', error);
@@ -73,7 +84,7 @@ function Stockspage() {
         await axios.post('http://localhost:8800/stocks', {
           item: { id: itemId },
           quantity,
-        });
+        }, config);
         fetchStocks();
       } catch (error) {
         console.error('Error creating stock:', error);
@@ -95,7 +106,6 @@ function Stockspage() {
           <tr>
             <th>ID</th>
             <th>Item Name</th>
-            <th>Quantity</th>
             <th>Last Updated</th>
             <th>Actions</th>
           </tr>
@@ -105,7 +115,6 @@ function Stockspage() {
             <tr key={stock.id}>
               <td>{stock.id}</td>
               <td>{stock.item.itemName}</td>
-              <td>{stock.quantity}</td>
               <td>{stock.lastUpdated}</td>
               <td>
                 <Button variant="secondary" className="me-2" onClick={() => handleEdit(stock)}>

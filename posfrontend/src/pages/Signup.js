@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Card from 'react-bootstrap/Card';
@@ -10,24 +11,36 @@ function Signup() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
-    // Handle signup logic here
-    console.log('Name:', name);
-    console.log('Email:', email);
-    console.log('Password:', password);
-    // Reset form and error
-    setName('');
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
-    setError('');
+
+    const newUser = {
+      username: name,
+      email: email,
+      password: password,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      await axios.post('http://localhost:8800/auth/users', newUser);
+      setSuccess("Account created successfully! Redirecting to login...");
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      setError('An error occurred while creating your account. Please try again.');
+    }
   };
 
   return (
@@ -35,6 +48,7 @@ function Signup() {
       <Card.Body>
         <Card.Title className="text-center">Sign Up</Card.Title>
         {error && <p className="text-danger text-center">{error}</p>}
+        {success && <p className="text-success text-center">{success}</p>}
         <Form onSubmit={handleSubmit}>
           <Form.Group className="mb-3" controlId="formBasicName">
             <Form.Label>Name</Form.Label>
